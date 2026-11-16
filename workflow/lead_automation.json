@@ -1,0 +1,404 @@
+{
+  "name": "Inbound Lead Scoring & AI Follow-up",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "Talk to our sales team",
+        "formDescription": "Tell us a bit about your company and we'll get back to you within one working day.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Full name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Work email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Company",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Company size",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "1-50"
+                  },
+                  {
+                    "option": "51-200"
+                  },
+                  {
+                    "option": "201-1000"
+                  },
+                  {
+                    "option": "1000+"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Your role",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Budget",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Under €5k"
+                  },
+                  {
+                    "option": "€5k-€20k"
+                  },
+                  {
+                    "option": "Over €20k"
+                  },
+                  {
+                    "option": "Not sure yet"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Timeline",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Within 1 month"
+                  },
+                  {
+                    "option": "1-3 months"
+                  },
+                  {
+                    "option": "Later than 3 months"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "What do you need help with?",
+              "fieldType": "textarea"
+            }
+          ]
+        },
+        "options": {
+          "respondWithOptions": {
+            "values": {
+              "formSubmittedText": "Thank you! We'll be in touch within one working day."
+            }
+          }
+        }
+      },
+      "id": "fe4ed0b8-701a-4580-99da-fd9abdb883c8",
+      "name": "Lead Form",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "function scoreLead(lead) {\n  const sizePoints = { \"1-50\": 5, \"51-200\": 15, \"201-1000\": 25, \"1000+\": 30 };\n  const budgetPoints = { \"Under €5k\": 5, \"€5k-€20k\": 20, \"Over €20k\": 30, \"Not sure yet\": 10 };\n  const timelinePoints = { \"Within 1 month\": 30, \"1-3 months\": 15, \"Later than 3 months\": 5 };\n  const seniorTitles = [\"head\", \"director\", \"vp\", \"vice president\", \"chief\", \"ceo\", \"cfo\", \"coo\",\n                        \"cto\", \"founder\", \"owner\", \"manager\", \"lead\"];\n\n  const reasons = [];\n  let score = 0;\n\n  const s = sizePoints[lead.company_size] ?? 0;\n  score += s; reasons.push(`Company size ${lead.company_size}: +${s}`);\n\n  const b = budgetPoints[lead.budget] ?? 0;\n  score += b; reasons.push(`Budget ${lead.budget}: +${b}`);\n\n  const t = timelinePoints[lead.timeline] ?? 0;\n  score += t; reasons.push(`Timeline ${lead.timeline}: +${t}`);\n\n  const role = String(lead.role || \"\").toLowerCase();\n  if (seniorTitles.some((w) => role.includes(w))) {\n    score += 10; reasons.push(\"Decision-maker role: +10\");\n  }\n\n  // Free email domains are less likely to be real business buyers\n  const email = String(lead.email || \"\").toLowerCase();\n  const freeDomains = [\"gmail.com\", \"yahoo.com\", \"hotmail.com\", \"outlook.com\", \"gmx.de\", \"web.de\"];\n  if (freeDomains.some((d) => email.endsWith(\"@\" + d))) {\n    score -= 10; reasons.push(\"Free email domain: -10\");\n  }\n\n  score = Math.max(0, Math.min(100, score));\n  const tier = score >= 70 ? \"Hot\" : score >= 40 ? \"Warm\" : \"Cold\";\n  return { score, tier, reasons: reasons.join(\"; \") };\n}\n\n// n8n Form Trigger returns fields by their labels; map them to clean keys\nconst f = $json;\nconst lead = {\n  name: f[\"Full name\"],\n  email: f[\"Work email\"],\n  company: f[\"Company\"],\n  company_size: f[\"Company size\"],\n  role: f[\"Your role\"],\n  budget: f[\"Budget\"],\n  timeline: f[\"Timeline\"],\n  message: f[\"What do you need help with?\"],\n};\nconst r = scoreLead(lead);\nreturn { json: { ...lead, score: r.score, tier: r.tier, score_reasons: r.reasons, received_at: new Date().toISOString() } };"
+      },
+      "id": "349f86aa-8452-4b2d-b80e-a148f2cf888f",
+      "name": "Score Lead",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: \"gpt-4o-mini\",\n  temperature: 0.4,\n  response_format: { type: \"json_object\" },\n  messages: [\n    { role: \"system\", content: \"You are a B2B sales development rep. Write a short, friendly, personal first email (max 90 words) to a new inbound lead. Mention their company and their need. No hard selling. End with one clear question proposing a 20-minute call. Return JSON with keys 'subject' and 'body'.\" },\n    { role: \"user\", content: `Name: ${$json.name}\\nCompany: ${$json.company} (${$json.company_size} employees)\\nRole: ${$json.role}\\nTimeline: ${$json.timeline}\\nTheir message: ${$json.message}\\nLead tier: ${$json.tier}` }\n  ]\n}) }}",
+        "options": {}
+      },
+      "id": "840e671f-212d-498f-8ef2-57c78d8ea1d3",
+      "name": "AI: Draft First Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        480,
+        300
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "// Combine the scored lead with the AI-written email\nconst lead = $('Score Lead').item.json;\nlet subject = \"\", body = \"\";\ntry {\n  const ai = JSON.parse($json.choices[0].message.content);\n  subject = ai.subject; body = ai.body;\n} catch (e) {\n  subject = `Thanks for reaching out, ${lead.name.split(\" \")[0]}`;\n  body = \"AI draft unavailable. Please write the first email manually.\";\n}\nreturn { json: { ...lead, email_subject: subject, email_draft: body, status: \"New\" } };"
+      },
+      "id": "cfcaa429-aa69-444d-9a66-00f583123d27",
+      "name": "Combine Lead + Email",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "url",
+          "value": "PASTE_YOUR_GOOGLE_SHEET_URL_HERE"
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Leads"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": []
+        },
+        "options": {}
+      },
+      "id": "f370daa5-cd90-4c7d-8166-7cd6de4dd84c",
+      "name": "Log to CRM Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        960,
+        300
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "f5078cf2-2231-4e04-a754-f6f8af35a3fe",
+              "leftValue": "={{ $json.tier }}",
+              "rightValue": "Hot",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ce87edec-5d47-4c7c-8667-32ae8799f237",
+      "name": "Is Hot Lead?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "PASTE_SALES_TEAM_EMAIL_HERE",
+        "subject": "=🔥 Hot lead: {{ $json.name }} ({{ $json.company }}), score {{ $json.score }}",
+        "emailType": "text",
+        "message": "=New hot lead. Please call within 1 hour.\n\nName: {{ $json.name }}\nRole: {{ $json.role }}\nCompany: {{ $json.company }} ({{ $json.company_size }})\nEmail: {{ $json.email }}\nBudget: {{ $json.budget }} | Timeline: {{ $json.timeline }}\nScore: {{ $json.score }} ({{ $json.score_reasons }})\n\nTheir message:\n{{ $json.message }}\n\n--- Suggested first email (review before sending) ---\nSubject: {{ $json.email_subject }}\n\n{{ $json.email_draft }}",
+        "options": {}
+      },
+      "id": "d1db605f-4c46-4851-a0c7-255c00644346",
+      "name": "Alert Sales: Hot Lead",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1440,
+        200
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 3,
+        "unit": "days"
+      },
+      "id": "e8778017-690c-4acb-b5f7-5fe3843aab85",
+      "name": "Wait 3 Days",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1680,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "PASTE_SALES_TEAM_EMAIL_HERE",
+        "subject": "=Follow-up reminder: {{ $('Combine Lead + Email').item.json.name }} ({{ $('Combine Lead + Email').item.json.company }})",
+        "emailType": "text",
+        "message": "=3 days have passed since {{ $('Combine Lead + Email').item.json.name }} from {{ $('Combine Lead + Email').item.json.company }} contacted us.\nIf there is no meeting booked yet, send a follow-up today.\nLead score: {{ $('Combine Lead + Email').item.json.score }} ({{ $('Combine Lead + Email').item.json.tier }})",
+        "options": {}
+      },
+      "id": "81ebcaf5-507f-4ca9-a3c5-b740f153968b",
+      "name": "Follow-up Reminder",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        1920,
+        200
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Inbound Lead Automation\n1. Lead fills in the form\n2. Rule-based score (0-100) → Hot / Warm / Cold\n3. AI drafts a personal first email\n4. Everything is logged to a Google Sheet (simple CRM)\n5. Hot leads → instant email alert to sales\n6. 3 days later → follow-up reminder\n\nSet up: add OpenAI, Google Sheets and Gmail credentials, paste your Sheet URL and sales email.",
+        "height": 300,
+        "width": 420
+      },
+      "id": "1bdd93a8-dbe7-482c-b910-f507accb7041",
+      "name": "Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        20
+      ]
+    }
+  ],
+  "connections": {
+    "Lead Form": {
+      "main": [
+        [
+          {
+            "node": "Score Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score Lead": {
+      "main": [
+        [
+          {
+            "node": "AI: Draft First Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI: Draft First Email": {
+      "main": [
+        [
+          {
+            "node": "Combine Lead + Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Lead + Email": {
+      "main": [
+        [
+          {
+            "node": "Log to CRM Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log to CRM Sheet": {
+      "main": [
+        [
+          {
+            "node": "Is Hot Lead?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Hot Lead?": {
+      "main": [
+        [
+          {
+            "node": "Alert Sales: Hot Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Alert Sales: Hot Lead": {
+      "main": [
+        [
+          {
+            "node": "Wait 3 Days",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 3 Days": {
+      "main": [
+        [
+          {
+            "node": "Follow-up Reminder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

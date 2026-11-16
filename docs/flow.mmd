@@ -1,0 +1,9 @@
+flowchart LR
+    A[Lead fills in form] --> B[Score lead 0-100<br/>Hot / Warm / Cold]
+    B --> C[AI drafts personal<br/>first email]
+    C --> D[Log to Google Sheet<br/>simple CRM]
+    D --> E{Hot lead?}
+    E -- Yes --> F[Instant email alert<br/>to sales with draft]
+    F --> G[Wait 3 days]
+    G --> H[Follow-up reminder]
+    E -- No --> I[Stays in CRM<br/>for nurturing]

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="440" viewBox="0 0 1280 440" role="img" aria-label="Lead automation workflow diagram">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#54708b"/></marker>
+    <style>
+      .box{fill:#f4f7fb;stroke:#54708b;stroke-width:2;rx:14}
+      .decision{fill:#fff6df;stroke:#c18a28;stroke-width:2}
+      .txt{font:600 18px Arial,sans-serif;fill:#1d2b3a;text-anchor:middle}
+      .sub{font:14px Arial,sans-serif;fill:#45596e;text-anchor:middle}
+      .line{fill:none;stroke:#54708b;stroke-width:3;marker-end:url(#arrow)}
+      .yes{font:600 14px Arial,sans-serif;fill:#23764b}
+      .no{font:600 14px Arial,sans-serif;fill:#6a7380}
+    </style>
+  </defs>
+  <rect width="1280" height="440" fill="#ffffff"/>
+  <rect class="box" x="20" y="145" width="165" height="94"/>
+  <text class="txt" x="102" y="181">Lead form</text><text class="sub" x="102" y="207">New inbound enquiry</text>
+  <rect class="box" x="235" y="145" width="175" height="94"/>
+  <text class="txt" x="322" y="181">Score lead</text><text class="sub" x="322" y="207">0–100 · Hot / Warm / Cold</text>
+  <rect class="box" x="460" y="145" width="185" height="94"/>
+  <text class="txt" x="552" y="181">AI email draft</text><text class="sub" x="552" y="207">Personal first response</text>
+  <rect class="box" x="695" y="145" width="175" height="94"/>
+  <text class="txt" x="782" y="181">Google Sheets</text><text class="sub" x="782" y="207">Lead log / simple CRM</text>
+  <path class="line" d="M185 192 H228"/><path class="line" d="M410 192 H453"/><path class="line" d="M645 192 H688"/>
+  <path class="decision" d="M960 132 L1050 192 L960 252 L870 192 Z"/>
+  <text class="txt" x="960" y="187">Hot lead?</text><text class="sub" x="960" y="209">Score ≥ 70</text>
+  <path class="line" d="M870 192 H880"/>
+  <rect class="box" x="1090" y="60" width="170" height="92"/>
+  <text class="txt" x="1175" y="96">Alert sales</text><text class="sub" x="1175" y="121">Email with score + draft</text>
+  <path class="line" d="M1015 153 L1090 105"/><text class="yes" x="1035" y="126">Yes</text>
+  <rect class="box" x="1090" y="286" width="170" height="92"/>
+  <text class="txt" x="1175" y="322">Wait 3 days</text><text class="sub" x="1175" y="347">Follow-up reminder</text>
+  <path class="line" d="M1175 152 V279"/>
+  <path class="line" d="M960 252 L960 332 H1082"/><text class="no" x="973" y="278">No</text>
+  <rect class="box" x="705" y="304" width="200" height="74"/>
+  <text class="txt" x="805" y="335">Nurture in CRM</text><text class="sub" x="805" y="357">No instant alert</text>
+  <path class="line" d="M870 228 L870 341 H913"/>
+</svg>

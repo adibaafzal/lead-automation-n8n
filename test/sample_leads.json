@@ -1,0 +1,6 @@
+[
+  {"name": "Lena Hoffmann", "email": "lena.hoffmann@nordlogistik.de", "company": "Nord Logistik GmbH", "company_size": "1000+", "role": "Head of Operations", "budget": "Over €20k", "timeline": "Within 1 month", "message": "We need to cut manual work in our order handling before Q1."},
+  {"name": "Tom Becker", "email": "tom@brightcart.io", "company": "BrightCart", "company_size": "51-200", "role": "Marketing Manager", "budget": "€5k-€20k", "timeline": "1-3 months", "message": "Looking into lead automation for our e-commerce team."},
+  {"name": "Sara Kim", "email": "sara.kim@gmail.com", "company": "Freelance", "company_size": "1-50", "role": "Consultant", "budget": "Under €5k", "timeline": "Later than 3 months", "message": "Just exploring options for a client."},
+  {"name": "Jonas Weber", "email": "j.weber@finvia.com", "company": "Finvia", "company_size": "201-1000", "role": "Analyst", "budget": "Not sure yet", "timeline": "1-3 months", "message": "Our sales team asked me to compare tools."}
+]

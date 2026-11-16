@@ -4,7 +4,7 @@ An **n8n** workflow that takes a new inbound lead from a web form, **scores it a
 
 It replaces the manual steps a sales or marketing team usually does for every new lead: reading the form, judging how promising it is, copying it into a spreadsheet, writing the first email and remembering to follow up.
 
-![Workflow](docs/flow.png)
+![Workflow](docs/flow.svg)
 
 ---
 
